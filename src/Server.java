@@ -8,20 +8,21 @@ import java.util.ArrayList;
 public class Server{
     private DatagramSocket datagramSocket;
     private ArrayList<Integer> clientPorts;
-    private byte[] buffer = new byte[1024];
+    private byte[] buffer;
 
 
     public Server(DatagramSocket datagramSocket) {
         this.datagramSocket = datagramSocket;
         clientPorts = new ArrayList<>();
+        buffer = new byte[512];
     }
 
     public void run() {
         while (true) {
             try {
+                buffer = new byte[512];
                 DatagramPacket datagramPacket = new DatagramPacket(buffer, buffer.length);
                 datagramSocket.receive(datagramPacket);
-                System.out.println(datagramPacket.getData());
                 int port = datagramPacket.getPort();
 
                 if (!clientPorts.contains(port)) {

@@ -1,60 +1,26 @@
-import javax.xml.crypto.Data;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
 import java.util.Scanner;
 
-//public class Client{
-//    private DatagramSocket datagramSocket;
-//    private InetAddress inetAddress;
-//    private byte[] buffer = new byte[256];
-//
-//    public Client(DatagramSocket datagramSocket, InetAddress inetAddress) {
-//        this.datagramSocket = datagramSocket;
-//        this.inetAddress = inetAddress;
-//    }
-//
-////    public void run(){
-////        Scanner scanner = new Scanner(System.in);
-////        while (true){
-////            try {
-////                DatagramPacket datagramPacket = new DatagramPacket(buffer, buffer.length);
-////                datagramSocket.receive(datagramPacket);
-////                String messageFromServer = new String(datagramPacket.getData(), 0, datagramPacket.getLength());
-////                System.out.println("Server: " + messageFromServer);
-////                String message = scanner.nextLine();
-////                buffer = message.getBytes();
-////                DatagramPacket sendDatagram = new DatagramPacket(buffer, buffer.length, inetAddress, 2011);
-////                datagramSocket.send(sendDatagram);
-////            }catch (IOException e){
-////                e.printStackTrace();
-////                break;
-////            }
-////        }
-////    }
-//
-//
-////    public static void main(String[] args) throws SocketException, UnknownHostException {
-////        DatagramSocket datagramSocket = new DatagramSocket();
-////        InetAddress inetAddress = InetAddress.getByName("localhost");
-////        Client client = new Client(datagramSocket, inetAddress);
-////        client.run();
-////        System.out.println("Send packets: ");
-////    }
-//}
-class MessageSender implements Runnable{
+class Sender implements Runnable{
     DatagramSocket datagramSocket;
     private final int port = 2011;
+    private final String userName;
+    private byte [] buffer;
 
-    public MessageSender(DatagramSocket datagramSocket) {
+    public Sender(DatagramSocket datagramSocket, String userName) {
         this.datagramSocket = datagramSocket;
+        this.userName = userName;
+        buffer = new byte[512];
     }
 
     public void sendMessage(String message) throws IOException {
-        byte [] buffer = message.getBytes();
+        buffer = new byte[512];
+        buffer = message.getBytes();
         InetAddress address = InetAddress.getByName("localhost");
-        System.out.println(buffer.length);
+        //System.out.println(buffer.length);
         DatagramPacket datagramPacket = new DatagramPacket(buffer, buffer.length, address, port);
         datagramSocket.send(datagramPacket);
     }
@@ -64,7 +30,7 @@ class MessageSender implements Runnable{
         boolean connected = false;
         do{
             try {
-                sendMessage("HelloThereAll");
+                sendMessage(userName + " has been connected to the server");
                 connected = true;
             }catch (IOException e){
                 e.printStackTrace();
@@ -74,37 +40,38 @@ class MessageSender implements Runnable{
 
         while (true){
             try {
-                while(!input.ready()){
-                    Thread.sleep(100);
-                }
-                sendMessage(input.readLine());
-            }catch (IOException | InterruptedException e){
+                String message = userName + ": " + input.readLine();
+                sendMessage(message);
+            }
+            catch (IOException e) {
                 e.printStackTrace();
+                System.out.println();
             }
         }
     }
 }
-class MessageReceiver implements Runnable{
+class Receiver implements Runnable{
 
     DatagramSocket datagramSocket;
-    byte buffer[];
+    byte [] buffer;
 
-    public MessageReceiver(DatagramSocket datagramSocket) {
+    public Receiver(DatagramSocket datagramSocket) {
         this.datagramSocket = datagramSocket;
-        buffer = new byte[1024];
+        buffer = new byte[512];
     }
 
     @Override
     public void run() {
         while (true){
             try {
-                buffer = new byte[1024];
+                buffer = new byte[512];
                 DatagramPacket datagramPacket = new DatagramPacket(buffer, buffer.length);
                 datagramSocket.receive(datagramPacket);
                 String receivedMessage = new String(datagramPacket.getData(), 0, datagramPacket.getLength());
+                //System.out.println(receivedMessage.length());
                 System.out.println(receivedMessage);
             }catch (IOException e){
-                System.out.println(e);
+                e.printStackTrace();
             }
         }
     }
@@ -113,11 +80,14 @@ class MessageReceiver implements Runnable{
 class ChatClient{
     public static void main(String[] args) throws SocketException {
         DatagramSocket datagramSocket = new DatagramSocket();
-        MessageReceiver messageReceiver = new MessageReceiver(datagramSocket);
-        MessageSender messageSender = new MessageSender(datagramSocket);
-        Thread receiver = new Thread(messageReceiver);
-        Thread sender = new Thread(messageSender);
-        receiver.start();
-        sender.start();
+        Receiver receiver = new Receiver(datagramSocket);
+        System.out.println("Type your name: ");
+        Scanner scanner = new Scanner(System.in);
+        String userName = scanner.nextLine();
+        Sender sender = new Sender(datagramSocket, userName);
+        Thread receiverThread = new Thread(receiver);
+        Thread senderThread = new Thread(sender);
+        receiverThread.start();
+        senderThread.start();
     }
 }
